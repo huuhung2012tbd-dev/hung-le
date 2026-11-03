@@ -1,10 +1,19 @@
 import { supabase } from "@/lib/supabase";
 import ScrollEffects from "./ScrollEffects";
+import CategoryGrid from "./CategoryGrid";
+import AiChatWidget from "./AiChatWidget";
+import ProductListSection from "./ProductListSection";
 
 const categories = [
-  ["⚡","Dây điện, cáp điện "],["🔌","Thiết bị đóng cắt"],["🔘","Công tắc, ổ cắm"],
-  ["💡","Đèn LED, chiếu sáng"],["🧰","Tủ điện, điện công nghiệp"],["〰️","Ống luồn & phụ kiện"],
-  ["⚙️","Tự động hóa, biến tần"],["🏠","Thiết bị điện dân dụng"],["🏗️","Thiết bị điện công trình"]
+  { name: "Dây điện, cáp điện", img: "/categories/day-dien.png", fallback: "⚡" },
+  { name: "Thiết bị đóng cắt", img: "/categories/dong-cat.png", fallback: "🔌" },
+  { name: "Công tắc, ổ cắm", img: "/categories/cong-tac.png", fallback: "🔘" },
+  { name: "Đèn LED, chiếu sáng", img: "/categories/den-led.png", fallback: "💡" },
+  { name: "Tủ điện, điện công nghiệp", img: "/categories/tu-dien.png", fallback: "🧰" },
+  { name: "Ống luồn & phụ kiện", img: "/categories/ong-luon.png", fallback: "〰️" },
+  { name: "Tự động hóa, biến tần", img: "/categories/bien-tan.png", fallback: "⚙️" },
+  { name: "Thiết bị điện dân dụng", img: "/categories/dan-dung.png", fallback: "🏠" },
+  { name: "Thiết bị điện công trình", img: "/categories/cong-trinh.png", fallback: "🏗️" },
 ];
 
 const trustBadges = [
@@ -25,12 +34,13 @@ export default async function Home() {
   let products:any[] = [];
   if (supabase) {
     const {data} = await supabase.from("products")
-      .select("id,name,sku,reference_price,availability,brands(name),product_images(image_url,is_primary)")
-      .eq("is_published",true).order("created_at",{ascending:false}).limit(8);
+      .select("id,name,sku,reference_price,availability,origin,description,brands(name),product_images(image_url,is_primary),product_specs(spec_group,spec_name,spec_value,unit)")
+      .eq("is_published",true).order("created_at",{ascending:false}).limit(12);
     products = data ?? [];
   }
   return <>
     <ScrollEffects />
+    <AiChatWidget />
 
     {/* ===== FLOATING ACTION BUTTONS ===== */}
     <div className="fab-container">
@@ -116,75 +126,17 @@ export default async function Home() {
       {/* CATEGORIES */}
       <section id="categories" className="reveal">
         <div className="section-head"><div><h2>Danh mục sản phẩm</h2><p>Tìm nhanh nhóm thiết bị bạn cần</p></div></div>
-        <div className="grid">
-          {categories.map(([ico,name], i) => (
-            <a className={`tile reveal reveal-delay-${(i % 4) + 1}`} href="#products" key={name}>
-              <div className="ico">{ico}</div>
-              <b>{name}</b>
-              <small>Xem danh mục →</small>
-            </a>
-          ))}
-        </div>
+        <CategoryGrid categories={categories} />
       </section>
 
       {/* PRODUCTS */}
       <section id="products" className="reveal">
         <div className="section-head"><div><h2>Sản phẩm nổi bật</h2><p>Giá tham khảo – vui lòng liên hệ để xác nhận giá và tình trạng hàng</p></div></div>
-        {products.length ? <div className="products">
-          {products.map((p) => {
-            const primaryImage = p.product_images?.find((img: any) => img.is_primary);
-            const imageUrl = primaryImage?.image_url || p.product_images?.[0]?.image_url;
-            return (
-              <article className="product reveal" key={p.id}>
-                <div className="photo">
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={p.name}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        display: "block",
-                      }}
-                    />
-                  ) : (
-                    <span>⚡</span>
-                  )}
-                </div>
-                <small>
-                  {p.brands?.name ?? "Thiết bị điện"} · {p.sku ?? "Chưa có mã"}
-                </small>
-                <h3>{p.name}</h3>
-                <div className="price">
-                  {p.reference_price
-                    ? Number(p.reference_price).toLocaleString("vi-VN") + " ₫"
-                    : "Liên hệ báo giá"}
-                </div>
-                <div className="product-footer">
-                  <span className="status">
-                    {p.availability === "in_stock" ? "Có hàng" : "Liên hệ kiểm tra"}
-                  </span>
-                  <a
-                    className="btn-zalo-sm"
-                    href={zaloProductUrl(p.name, p.sku)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <img
-                      src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg"
-                      alt="Zalo"
-                      width="16"
-                      height="16"
-                      style={{ verticalAlign: "middle" }}
-                    />
-                    <span>Báo giá Zalo</span>
-                  </a>
-                </div>
-              </article>
-            );
-          })}
-        </div> : <div className="note">Danh mục sản phẩm đang được cập nhật. Khi kết nối cơ sở dữ liệu và thêm sản phẩm trong quản trị, sản phẩm sẽ hiển thị tại đây.</div>}
+        {products.length ? (
+          <ProductListSection products={products} />
+        ) : (
+          <div className="note">Danh mục sản phẩm đang được cập nhật. Khi kết nối cơ sở dữ liệu và thêm sản phẩm trong quản trị, sản phẩm sẽ hiển thị tại đây.</div>
+        )}
       </section>
 
       {/* BRANDS */}
